@@ -51,11 +51,10 @@ modal.el.addEventListener('click', (e)=>{ if(e.target === modal.el) modal.close(
 
 // ---------- data ----------
 async function fetchJSON(url) {
-  const r = await fetch(url);
+  const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
   return r.json();
 }
-
 async function getShop() {
   try {
     const live = await fetchJSON('/api/shop');
@@ -65,7 +64,6 @@ async function getShop() {
     return fetchJSON('./data/fallback-shop.json');
   }
 }
-
 let mediaIndex = null;
 async function loadMediaIndex() {
   if (!mediaIndex) {
@@ -74,15 +72,13 @@ async function loadMediaIndex() {
   }
   return mediaIndex;
 }
-
 async function getItemDetails(id) {
   try { return await fetchJSON(`/api/item?id=${encodeURIComponent(id)}`); }
   catch { return null; }
 }
 
-// ---------- shape normalizers ----------
+// ---------- normalizers (fixes [object Object] + image src) ----------
 function pickPoster(it) {
-  // displayAssets can be array or object; images can exist too
   const da = it.displayAssets;
   if (Array.isArray(da) && da.length) {
     const x = da[0] || {};
@@ -94,34 +90,27 @@ function pickPoster(it) {
   const im = it.images || it.displayImage || {};
   return im.full_background || im.background || im.icon || im.featured || it.full_background || it.icon || '';
 }
-
 function rarityText(r) {
   if (!r) return '';
   if (typeof r === 'string') return r;
-  // API often returns { id, name }
   return r.name || r.id || '';
 }
-
 function mainTypeText(t) {
   if (!t) return '';
   if (typeof t === 'string') return t;
   return t.value || t.name || '';
 }
-
 function priceValue(it) {
   const p = it.price || {};
   return (p.finalPrice ?? p.regularPrice ?? it.vbucks ?? it.finalPrice ?? it.regularPrice ?? '');
 }
-
 function sectionNameOf(it) {
   const s = it.section;
   return (s && (s.name || s.displayName)) || s || 'Misc';
 }
-
 function displayNameOf(it) {
   return it.displayName || it.display_name || it.name || (it.devName ? String(it.devName).replace(/^.*:\s*/, '') : 'Item');
 }
-
 function rarityClass(r) {
   const name = rarityText(r);
   const map = {
@@ -149,7 +138,6 @@ function card({item, poster, onClick}) {
   div.addEventListener('click', onClick);
   return div;
 }
-
 async function resolveMedia({title, ids, poster}) {
   const idx = await loadMediaIndex();
   for (const id of ids) {
@@ -170,7 +158,6 @@ async function resolveMedia({title, ids, poster}) {
   }
   return { title, video: '', audio: '', poster };
 }
-
 function render(shopData) {
   const sectionsRoot = $('#sections');
   const nav = $('#categoryNav');
@@ -228,7 +215,6 @@ function render(shopData) {
     sectionsRoot.appendChild(sec);
   }
 }
-
 getShop().then(render).catch(err => {
   console.error(err);
   $('#sections').innerHTML = `<div style="opacity:.8">Failed to load shop. Try again in a bit.</div>`;
